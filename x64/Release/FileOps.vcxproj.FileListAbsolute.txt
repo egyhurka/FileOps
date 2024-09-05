@@ -1,0 +1,1 @@
+C:\Programozás\cpp\FileOps\x64\Release\FileOps.exe

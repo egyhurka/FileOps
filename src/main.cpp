@@ -13,9 +13,9 @@
 static char uInput[_MAX_PATH];
 std::string windowTitle = "FileOps | v: 0.1";
 
-std::vector<std::string> commands = { "clear", "c", "exit", "ex", "close", "help", "?", "cd", "dd", "df", "ddf"};
+std::vector<std::string> commands = { "clear", "c", "exit", "ex", "close", "help", "?", "cd", "dd", "df", "ddf", "md", "cp", "ren", "rm" };
 
-void handleCommand(std::string& rawUserCommand) {
+void handleCommand(std::string& rawUserCommand, std::vector<std::string> args) {
     FileManager fm;
     std::string foundedCommand;
     std::map<std::string, std::function<void()>> commandMap = {
@@ -24,16 +24,22 @@ void handleCommand(std::string& rawUserCommand) {
         { "exit", [&]() { globalVariables.progIsRunning = false; } },
         { "ex", [&]() { globalVariables.progIsRunning = false; } },
         { "close", [&]() { globalVariables.progIsRunning = false; } },
-        { "help", [&]() { CommandsHelp(); }},
-        { "?", [&]() { CommandsHelp(); }},
+        { "help", [&]() { CommandsHelp(); } },
+        { "?", [&]() { CommandsHelp(); } },
         { "cd", [&]() { fm.changeDirectory(rawUserCommand); } },
-        { "dd", [&]() { FilePrinter(globalVariables.currentPath, {}, fm.listDirectory(globalVariables.currentPath, true), "dir"); }},
-        { "df", [&]() { FilePrinter(globalVariables.currentPath, fm.listDirectory(globalVariables.currentPath, false), {}, "file"); }},
-        { "ddf", [&]() { FilePrinter(globalVariables.currentPath, fm.listDirectory(globalVariables.currentPath, true), fm.listDirectory(globalVariables.currentPath, false), "both"); }}
+        { "dd", [&]() { FilePrinter({}, fm.listDirectory(globalVariables.currentPath, true), "dir"); } },
+        { "df", [&]() { FilePrinter(fm.listDirectory(globalVariables.currentPath, false), {}, "file"); } },
+        { "ddf", [&]() { FilePrinter(fm.listDirectory(globalVariables.currentPath, false), fm.listDirectory(globalVariables.currentPath, true), "both"); } },
+        { "md", [&]() { fm.createDirectory(args[0]); } },
+        { "cp", [&]() { fm.copyFile(args[0], args[1]); } },
+        { "ren", [&]() { fm.renameFile(args[0], args[1]); } },
+        { "rm", [&]() { fm.deleteFile(args[0]); } }
     };
 
+    std::string firstWord = rawUserCommand.substr(0, rawUserCommand.find(' '));
+
     for (const auto& [command, action] : commandMap) {
-        if (rawUserCommand == command) {
+        if (firstWord == command) {
             foundedCommand = command;
             break;
         }
@@ -50,23 +56,23 @@ void handleCommand(std::string& rawUserCommand) {
 void processCommand(std::string& rawUserCommand) {
     bool commandFound = false;
     std::string foundedCommand;
+
     for (const auto& e : commands) {
-        if (e == rawUserCommand) {
+        if (rawUserCommand.find(e) != std::string::npos) {
             commandFound = true;
             foundedCommand = e;
             break;
         }
     }
 
-    std::cout << foundedCommand << std::endl;
-
     if (commandFound && !foundedCommand.empty()) {
-        handleCommand(rawUserCommand);
+        handleCommand(rawUserCommand, findArgs(rawUserCommand));
     }
     else {
         std::cout << rawUserCommand << " is not recognizable. " << std::endl;
     }
 }
+
 
 int main() {
 

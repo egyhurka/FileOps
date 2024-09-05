@@ -16,7 +16,7 @@ void FileManager::changeDirectory(const std::string& arg) {
             globalVariables.currentPath = path;
         }
         else {
-            std::wcerr << L"An unknown error occurred while changing directory." << std::endl;
+            std::cout << "An unknown error occurred while changing directory." << std::endl;
         }
     }
     else if (formatted == ".." || formatted == ".") {
@@ -31,7 +31,7 @@ void FileManager::changeDirectory(const std::string& arg) {
             globalVariables.currentPath = p;
         }
         else {
-            std::wcerr << L"An unknown error occurred while changing directory." << std::endl;
+            std::cout << "An unknown error occurred while changing directory." << std::endl;
         }
     }
     else {
@@ -40,35 +40,35 @@ void FileManager::changeDirectory(const std::string& arg) {
     }
 }
 
-std::vector<std::filesystem::path> FileManager::listDirectory(const std::filesystem::path path, const bool directory) {
-	std::vector<std::filesystem::path> directories;
-	if (fs::is_directory(path)) {
-		for (const auto& entry : fs::directory_iterator(path)) {
-			if (directory && !entry.is_regular_file()) {
-					directories.push_back(entry.path());
-			}
-			else {
-				if (!entry.is_directory())
-					directories.push_back(entry.path());
-			}
-		}
-	}
-	else {
-		std::wcerr << L"The specified path is not a directory." << std::endl;
-	}
+std::vector<std::filesystem::path> FileManager::listDirectory(const std::filesystem::path& path, const bool& directory) {
+    std::vector<std::filesystem::path> list;
+    if (fs::is_directory(path)) {
+        for (const auto& entry : fs::directory_iterator(path)) {
+            if (directory && entry.is_directory()) {
+                list.push_back(entry.path());
+            }
+            else if (!directory && entry.is_regular_file()) {
+                list.push_back(entry.path());
+            }
+        }
+    }
+    else {
+        std::cout << "The specified path is not a directory." << std::endl;
+    }
 
-	return directories;
+    return list;
 }
 
-void FileManager::copyFile(const std::wstring& path, const std::wstring& destination) noexcept {
+
+void FileManager::copyFile(const std::string& path, const std::string& destination) {
     try {
         if (!fs::exists(path)) {
-            std::wcerr << L"Error: The specified path does not exist." << std::endl;
+            std::cout << "Error: The specified path does not exist." << std::endl;
             return;
         }
 
         if (!fs::is_directory(destination)) {
-            std::wcerr << L"Error: The target path is not a directory." << std::endl;
+            std::cout << "Error: The target path is not a directory." << std::endl;
             return;
         }
 
@@ -82,44 +82,71 @@ void FileManager::copyFile(const std::wstring& path, const std::wstring& destina
             fs::copy(path, destPath, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
         }
         else {
-            std::wcerr << L"Error: The specified path is not a file or directory." << std::endl;
+            std::cout << "Error: The specified path is not a file or directory." << std::endl;
         }
     }
     catch (const fs::filesystem_error& e) {
         std::wcerr << L"Filesystem error: " << e.what() << std::endl;
     }
     catch (...) {
-        std::wcerr << L"An unknown error occurred while copying the file or directory." << std::endl;
+        std::cout << "An unknown error occurred while copying the file or directory." << std::endl;
     }
 }
-void FileManager::renameFile(const std::string& path, const std::string& newName) {
-    if (fs::is_directory(path)) {
-        fs::path newFilePath = fs::path(path).parent_path() / newName;
-        fs::rename(path, newFilePath);
-    }
-};
 
-void FileManager::deleteFile(const std::wstring& path) {
-    if (fs::exists(path)) {
-        fs::remove(path);
-    }
-    else {
-        std::wcerr << L"Error: The specified path does not exist." << std::endl;
-    }
-};
+void FileManager::renameFile(const std::string& name, const std::string& newName) {
+    fs::path oldPath = globalVariables.currentPath / name;
+    fs::path newPath = globalVariables.currentPath / newName;
 
-void FileManager::createDirectory(const std::wstring& path) {
-    fs::path parentPath = fs::path(path).parent_path();
-
-    if (fs::exists(path)) {
-        std::wcerr << L"Error: The specified path is already exists." << std::endl;
+    if (!fs::exists(oldPath)) {
+        std::cout << "Error: The specified file or directory does not exist: " << oldPath << std::endl;
         return;
     }
 
-    if (fs::is_directory(parentPath) && fs::exists(parentPath)) {
-        fs::create_directory(path);
+    if (fs::exists(newPath)) {
+        std::cout << "Error: A file or directory with the new name already exists: " << newPath << std::endl;
+        return;
+    }
+
+    try {
+        fs::rename(oldPath, newPath);
+    }
+    catch (const fs::filesystem_error& e) {
+        std::cout << "Error renaming file: " << e.what() << std::endl;
+    }
+}
+
+void FileManager::deleteFile(const std::string& path) {
+    fs::path p = globalVariables.currentPath / path;
+    if (fs::exists(p)) {
+        fs::remove(p);
     }
     else {
-        std::wcerr << L"Error: The specified path does not exist or not a directory." << std::endl;
+        std::cout << "Error: The specified path does not exist." << std::endl;
     }
 };
+
+void FileManager::createDirectory(const std::string& name) {
+    if (name.empty()) {
+        std::cout << "Error: Directory name cannot be empty." << std::endl;
+        return;
+    }
+
+    fs::path newDirPath = globalVariables.currentPath / name;
+
+    if (fs::exists(newDirPath)) {
+        std::cout << "Error: The specified directory already exists." << std::endl;
+        return;
+    }
+
+    if (fs::is_directory(globalVariables.currentPath)) {
+        try {
+            fs::create_directory(newDirPath);
+        }
+        catch (const fs::filesystem_error& e) {
+            std::wcerr << L"Error creating directory: " << e.what() << std::endl;
+        }
+    }
+    else {
+        std::cout << "Error: The specified path does not exist or is not a directory." << std::endl;
+    }
+}
